@@ -1,49 +1,40 @@
 const express = require("express");
-require("dotenv").config();
 const { Configuration, OpenAIApi } = require("openai");
+require("dotenv").config();
 
 const app = express();
-
 app.use(express.json());
 
 const configuration = new Configuration({
-  apiKey: process.env.OPEN_AI_KEY,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
 
-app.post("/find", async (req, res) => {
+const port = process.env.PORT || 5000;
+
+app.post("/ask", async (req, res) => {
+  const prompt = req.body.prompt;
   try {
-    const { prompt } = req.body;
+    if (prompt == null) {
+      //   throw new Error("Uh oh, no prompt was provided");
+      return res.status(500).send({
+        success: false,
+        message: "Uh oh, no prompt was provided",
+      });
+    }
     const response = await openai.createCompletion({
       model: "text-davinci-003",
-      prompt: `
-              ${prompt}
-
-              The time complexity of this function is
-              ###
-            `,
-      max_tokens: 64,
-      temperature: 0,
-      top_p: 1.0,
-      frequency_penalty: 0.0,
-      presence_penalty: 0.0,
-      stop: ["\n"],
+      prompt,
+      //   max_tokens: 64,
     });
-
+    const completion = response.data.choices[0].text;
     return res.status(200).json({
       success: true,
-      data: response.data.choices[0].text,
+      message: completion,
     });
   } catch (error) {
-    return res.status(400).json({
-      success: false,
-      error: error.response
-        ? error.response.data
-        : "There was an issue on the server",
-    });
+    console.log(error.message);
   }
 });
 
-const port = process.env.PORT || 5000;
-
-app.listen(port, () => console.log(`Server listening on port ${port}`));
+app.listen(port, () => console.log(`Server is running on port ${port}!!`));
